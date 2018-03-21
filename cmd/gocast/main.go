@@ -23,6 +23,7 @@ func main() {
 		Required: false,
 		Help:     "Specifies where downloaded episodes will be saved to",
 		Default:  cwd})
+	all := parser.Flag( "", "all", &argparse.Options{Help: "Download all episodes"})
 	latest := parser.Flag( "", "latest", &argparse.Options{Help: "Download the latest episode"})
 	err = parser.Parse(os.Args)
 
@@ -37,6 +38,9 @@ func main() {
 
 	if *latest {
 		err = client.DownloadLatestEpisode(*outputPath)
+	}
+	if *all {
+		err = client.DownloadAllEpisodes(*outputPath)
 	}
 
 	if err != nil {

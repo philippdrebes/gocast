@@ -54,6 +54,34 @@ func (c AcastClient) reload() (*etree.Document, error) {
 	return doc, nil
 }
 
+func (c AcastClient) DownloadAllEpisodes(outputPath string) error {
+	if c.channel == nil {
+		return nil
+	}
+
+	fmt.Printf("Downloading all episodes")
+
+	episodeCount := len(c.channel.SelectElements("item"))
+	for index, episode := range c.channel.SelectElements("item") {
+		title := episode.SelectElement("title")
+		enclosure := episode.SelectElement("enclosure")
+
+		media := enclosure.SelectAttrValue("url", "")
+		if len(media) == 0 {
+			fmt.Printf("\nError downloading %s. Could not find media link.", title)
+			return nil
+		}
+		fmt.Printf("Downloading [%d/%d]: %s\n", index + 1, episodeCount, title.Text())
+		err := c.download(media, filepath.Join(outputPath, fmt.Sprintf("%s.mp3", title.Text())))
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (c AcastClient) DownloadLatestEpisode(outputPath string) error {
 	if c.channel == nil {
 		return nil
@@ -111,5 +139,6 @@ func (c AcastClient) download(url string, output string) (err error) {
 		return err
 	}
 
+	bar.Finish()
 	return nil
 }
