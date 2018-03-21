@@ -5,5 +5,10 @@ gocast is a program for downloading podcasts from acast.com via rss feed.
 ```
 git clone https://github.com/philippdrebes/gocast.git
 cd gocast
-go build main.go
+make build
+```
+
+## Install
+```
+make install
 ```

@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/akamensky/argparse"
-	"./src"
 	"path/filepath"
+	"github.com/philippdrebes/gocast"
 )
 
 func main() {
