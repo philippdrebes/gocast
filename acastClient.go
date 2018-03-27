@@ -9,12 +9,14 @@ import (
 	"io"
 	"gopkg.in/cheggaaa/pb.v1"
 	"path/filepath"
+	"github.com/mikkyang/id3-go"
+	"github.com/mikkyang/id3-go/v2"
 )
 
 type AcastClient struct {
-	url string
+	url      string
 	document *etree.Document
-	channel *etree.Element
+	channel  *etree.Element
 }
 
 func NewAcastClient(url string) (*AcastClient, error) {
@@ -71,7 +73,7 @@ func (c AcastClient) DownloadAllEpisodes(outputPath string) error {
 			fmt.Printf("\nError downloading %s. Could not find media link.", title)
 			return nil
 		}
-		fmt.Printf("Downloading [%d/%d]: %s\n", index + 1, episodeCount, title.Text())
+		fmt.Printf("Downloading [%d/%d]: %s\n", index+1, episodeCount, title.Text())
 		err := c.download(media, filepath.Join(outputPath, fmt.Sprintf("%s.mp3", title.Text())))
 
 		if err != nil {
@@ -87,6 +89,8 @@ func (c AcastClient) DownloadLatestEpisode(outputPath string) error {
 		return nil
 	}
 
+	author := c.channel.SelectElement("itunes:author")
+
 	for _, episode := range c.channel.SelectElements("item")[:1] {
 		title := episode.SelectElement("title")
 		enclosure := episode.SelectElement("enclosure")
@@ -101,6 +105,44 @@ func (c AcastClient) DownloadLatestEpisode(outputPath string) error {
 		outputPath = filepath.Join(outputPath, fmt.Sprintf("%s.mp3", title.Text()))
 
 		c.download(media, outputPath)
+
+		// set ID3 Tags
+		mp3File, _ := id3.Open(outputPath)
+
+		if author != nil {
+			mp3File.SetArtist(author.Text())
+		}
+		mp3File.SetTitle(title.Text())
+
+		desc := episode.FindElement("itunes:summary")
+		if desc != nil {
+			ft := v2.V23FrameTypeMap["TIT3"]
+			descText := desc.Text()
+			descFrame := v2.NewTextFrame(ft, descText)
+			mp3File.AddFrames(descFrame)
+		}
+
+		//picture := episode.FindElement("itunes:image")
+		//if picture != nil {
+		//	pictureHref := picture.SelectAttrValue("href", "")
+		//	if len(pictureHref) > 0 {
+		//
+		//		response, err := http.Get(pictureHref)
+		//		if err != nil {
+		//			return err
+		//		}
+		//
+		//		defer response.Body.Close()
+		//
+		//		ft := v2.V23FrameTypeMap["APIC"]
+		//
+		//		buf, err := ioutil.ReadAll(response.Body)
+		//		pictureFrame := v2.NewDataFrame(ft, buf)
+		//		mp3File.AddFrames(pictureFrame)
+		//	}
+		//}
+
+		mp3File.Close()
 	}
 
 	return nil
@@ -109,7 +151,7 @@ func (c AcastClient) DownloadLatestEpisode(outputPath string) error {
 func (c AcastClient) download(url string, output string) (err error) {
 	// create the file
 	out, err := os.Create(output)
-	if err != nil  {
+	if err != nil {
 		return err
 	}
 	defer out.Close()
@@ -135,10 +177,11 @@ func (c AcastClient) download(url string, output string) (err error) {
 
 	// Writer the body to file
 	_, err = io.Copy(out, reader)
-	if err != nil  {
+	if err != nil {
 		return err
 	}
 
 	bar.Finish()
+
 	return nil
 }
