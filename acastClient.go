@@ -9,8 +9,7 @@ import (
 	"io"
 	"gopkg.in/cheggaaa/pb.v1"
 	"path/filepath"
-	"github.com/mikkyang/id3-go"
-	"github.com/mikkyang/id3-go/v2"
+	"strings"
 )
 
 type AcastClient struct {
@@ -89,7 +88,7 @@ func (c AcastClient) DownloadLatestEpisode(outputPath string) error {
 		return nil
 	}
 
-	author := c.channel.SelectElement("itunes:author")
+	//author := c.channel.SelectElement("itunes:author")
 
 	for _, episode := range c.channel.SelectElements("item")[:1] {
 		title := episode.SelectElement("title")
@@ -101,26 +100,28 @@ func (c AcastClient) DownloadLatestEpisode(outputPath string) error {
 			return nil
 		}
 
+		titleText := title.Text()
+		titleText = strings.Replace(titleText, ":", "", -1)
 		fmt.Printf("Downloading latest episode: %s\n", title.Text())
-		outputPath = filepath.Join(outputPath, fmt.Sprintf("%s.mp3", title.Text()))
+		outputPath = filepath.Join(outputPath, fmt.Sprintf("%s.mp3", titleText))
 
 		c.download(media, outputPath)
 
 		// set ID3 Tags
-		mp3File, _ := id3.Open(outputPath)
+		//mp3File, _ := id3.Open(outputPath)
+		//mp3File.SetTitle(title.Text())
+		//
+		//if author != nil {
+		//	mp3File.SetArtist(author.Text())
+		//}
 
-		if author != nil {
-			mp3File.SetArtist(author.Text())
-		}
-		mp3File.SetTitle(title.Text())
-
-		desc := episode.FindElement("itunes:summary")
-		if desc != nil {
-			ft := v2.V23FrameTypeMap["TIT3"]
-			descText := desc.Text()
-			descFrame := v2.NewTextFrame(ft, descText)
-			mp3File.AddFrames(descFrame)
-		}
+		//desc := episode.FindElement("itunes:summary")
+		//if desc != nil {
+		//	ft := v2.V23FrameTypeMap["TIT3"]
+		//	descText := desc.Text()
+		//	descFrame := v2.NewTextFrame(ft, descText)
+		//	mp3File.AddFrames(descFrame)
+		//}
 
 		//picture := episode.FindElement("itunes:image")
 		//if picture != nil {
@@ -142,7 +143,7 @@ func (c AcastClient) DownloadLatestEpisode(outputPath string) error {
 		//	}
 		//}
 
-		mp3File.Close()
+		//mp3File.Close()
 	}
 
 	return nil
