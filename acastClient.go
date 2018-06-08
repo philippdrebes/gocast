@@ -10,6 +10,8 @@ import (
 	"gopkg.in/cheggaaa/pb.v1"
 	"path/filepath"
 	"strings"
+	"github.com/bogem/id3v2"
+	"log"
 )
 
 type AcastClient struct {
@@ -72,8 +74,12 @@ func (c AcastClient) DownloadAllEpisodes(outputPath string) error {
 			fmt.Printf("\nError downloading %s. Could not find media link.", title)
 			return nil
 		}
+		titleText := title.Text()
+		titleText = strings.Replace(titleText, ":", "", -1)
+		titleText = strings.Replace(titleText, "?", "", -1)
+		titleText = strings.Replace(titleText, "|", "", -1)
 		fmt.Printf("Downloading [%d/%d]: %s\n", index+1, episodeCount, title.Text())
-		err := c.download(media, filepath.Join(outputPath, fmt.Sprintf("%s.mp3", title.Text())))
+		err := c.download(media, filepath.Join(outputPath, fmt.Sprintf("%s.mp3", titleText)))
 
 		if err != nil {
 			return err
@@ -88,7 +94,7 @@ func (c AcastClient) DownloadLatestEpisode(outputPath string) error {
 		return nil
 	}
 
-	//author := c.channel.SelectElement("itunes:author")
+	author := c.channel.SelectElement("itunes:author")
 
 	for _, episode := range c.channel.SelectElements("item")[:1] {
 		title := episode.SelectElement("title")
@@ -102,48 +108,35 @@ func (c AcastClient) DownloadLatestEpisode(outputPath string) error {
 
 		titleText := title.Text()
 		titleText = strings.Replace(titleText, ":", "", -1)
+		titleText = strings.Replace(titleText, "?", "", -1)
+		titleText = strings.Replace(titleText, "|", "", -1)
 		fmt.Printf("Downloading latest episode: %s\n", title.Text())
 		outputPath = filepath.Join(outputPath, fmt.Sprintf("%s.mp3", titleText))
 
 		c.download(media, outputPath)
 
 		// set ID3 Tags
-		//mp3File, _ := id3.Open(outputPath)
-		//mp3File.SetTitle(title.Text())
-		//
-		//if author != nil {
-		//	mp3File.SetArtist(author.Text())
-		//}
+		// Open file and parse tag in it.
+		tag, err := id3v2.Open(outputPath, id3v2.Options{Parse: true})
+		if err != nil {
+			log.Fatal("Error while opening mp3 file: ", err)
+		}
 
-		//desc := episode.FindElement("itunes:summary")
-		//if desc != nil {
-		//	ft := v2.V23FrameTypeMap["TIT3"]
-		//	descText := desc.Text()
-		//	descFrame := v2.NewTextFrame(ft, descText)
-		//	mp3File.AddFrames(descFrame)
-		//}
+		// Set simple text frames.
+		tag.SetArtist(author.Text())
+		tag.SetTitle(titleText)
 
-		//picture := episode.FindElement("itunes:image")
-		//if picture != nil {
-		//	pictureHref := picture.SelectAttrValue("href", "")
-		//	if len(pictureHref) > 0 {
-		//
-		//		response, err := http.Get(pictureHref)
-		//		if err != nil {
-		//			return err
-		//		}
-		//
-		//		defer response.Body.Close()
-		//
-		//		ft := v2.V23FrameTypeMap["APIC"]
-		//
-		//		buf, err := ioutil.ReadAll(response.Body)
-		//		pictureFrame := v2.NewDataFrame(ft, buf)
-		//		mp3File.AddFrames(pictureFrame)
-		//	}
-		//}
+		comment := id3v2.CommentFrame{
+			Encoding:    id3v2.EncodingUTF8,
+			Text:        episode.SelectElement("itunes:summary").Text(),
+		}
+		tag.AddCommentFrame(comment)
 
-		//mp3File.Close()
+		// Write it to file.
+		if err = tag.Save(); err != nil {
+			log.Fatal("Error while saving a tag: ", err)
+		}
+		tag.Close()
 	}
 
 	return nil
