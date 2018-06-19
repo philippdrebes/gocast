@@ -78,6 +78,8 @@ func (c AcastClient) DownloadAllEpisodes(outputPath string) error {
 		titleText = strings.Replace(titleText, ":", "", -1)
 		titleText = strings.Replace(titleText, "?", "", -1)
 		titleText = strings.Replace(titleText, "|", "", -1)
+		titleText = strings.Replace(titleText, "/", "", -1)
+		titleText = strings.Replace(titleText, "\\", "", -1)
 		fmt.Printf("Downloading [%d/%d]: %s\n", index+1, episodeCount, title.Text())
 		err := c.download(media, filepath.Join(outputPath, fmt.Sprintf("%s.mp3", titleText)))
 
@@ -110,6 +112,8 @@ func (c AcastClient) DownloadLatestEpisode(outputPath string) error {
 		titleText = strings.Replace(titleText, ":", "", -1)
 		titleText = strings.Replace(titleText, "?", "", -1)
 		titleText = strings.Replace(titleText, "|", "", -1)
+		titleText = strings.Replace(titleText, "/", "", -1)
+		titleText = strings.Replace(titleText, "\\", "", -1)
 		fmt.Printf("Downloading latest episode: %s\n", title.Text())
 		outputPath = filepath.Join(outputPath, fmt.Sprintf("%s.mp3", titleText))
 
