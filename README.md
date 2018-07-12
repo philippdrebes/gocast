@@ -2,19 +2,19 @@
 gocast is a program for downloading podcasts from acast.com via rss feed.
 
 ## Build
-```shell
+```
 git clone https://github.com/philippdrebes/gocast.git
 cd gocast
 make build
 ```
 
 ## Install
-```shell
+```
 make install
 ```
 
 ## Usage
-```shell
+```
 Hello Gocast!
 usage: gocast [-h|--help] -n|--name "<value>" [-o|--output "<value>"]
               [-l|--list] [-i|--index <integer>] [--all] [--latest]
