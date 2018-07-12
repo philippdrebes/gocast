@@ -18,13 +18,19 @@ func main() {
 	}
 
 	parser := argparse.NewParser("gocast", "gocast is a program for downloading podcasts from acast.com via rss feed.")
-	name := parser.String("n", "name", &argparse.Options{Required: true, Help: "Podcast name e.g. letstalkaboutcarsyo for http://rss.acast.com/letstalkaboutcarsyo"})
+	name := parser.String("n", "name", &argparse.Options{
+		Required: true,
+		Help: "Podcast name e.g. letstalkaboutcarsyo for http://rss.acast.com/letstalkaboutcarsyo"})
 	outputPath := parser.String("o", "output", &argparse.Options{
 		Required: false,
 		Help:     "Specifies where downloaded episodes will be saved to",
 		Default:  cwd})
-	all := parser.Flag( "", "all", &argparse.Options{Help: "Download all episodes"})
-	latest := parser.Flag( "", "latest", &argparse.Options{Help: "Download the latest episode"})
+	list := parser.Flag("l", "list", &argparse.Options{Help: "List all episodes"})
+	index := parser.Int("i", "index", &argparse.Options{
+		Help: "Download a single episode via index. Run the 'list' command in order to get the index of the desired episode",
+		Default: -1})
+	all := parser.Flag("", "all", &argparse.Options{Help: "Download all episodes"})
+	latest := parser.Flag("", "latest", &argparse.Options{Help: "Download the latest episode"})
 	err = parser.Parse(os.Args)
 
 	if err != nil {
@@ -36,8 +42,14 @@ func main() {
 
 	client, err := gocast.NewAcastClient(fmt.Sprintf("http://rss.acast.com/%s", *name))
 
+	if *list {
+		client.ListAllEpisodes()
+	}
+	if *index != -1 {
+		client.DownloadEpisode(*index, *outputPath)
+	}
 	if *latest {
-		err = client.DownloadLatestEpisode(*outputPath)
+		err = client.DownloadEpisode(0, *outputPath)
 	}
 	if *all {
 		err = client.DownloadAllEpisodes(*outputPath)

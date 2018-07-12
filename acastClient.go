@@ -10,6 +10,7 @@ import (
 	"gopkg.in/cheggaaa/pb.v1"
 	"path/filepath"
 	"regexp"
+	"sort"
 )
 
 var invalidFileNameRegex = regexp.MustCompile(regexp.QuoteMeta(`[\\/:"*?<>|]+`))
@@ -18,7 +19,7 @@ type AcastClient struct {
 	url      string
 	document *etree.Document
 	channel  *etree.Element
-	episodes map[int]Episode
+	episodes map[int]*Episode
 }
 
 type Episode struct {
@@ -41,7 +42,7 @@ func NewAcastClient(url string) (*AcastClient, error) {
 
 	fmt.Println(client.channel.SelectElement("title").Text())
 
-	client.GetAllEpisodes()
+	client.episodes = *client.GetAllEpisodes()
 
 	return client, nil
 }
@@ -66,12 +67,12 @@ func (c AcastClient) reload() (*etree.Document, error) {
 	return doc, nil
 }
 
-func (c AcastClient) GetAllEpisodes() *map[int]Episode {
+func (c AcastClient) GetAllEpisodes() *map[int]*Episode {
 	if c.channel == nil {
 		return nil
 	}
 
-	c.episodes = make(map[int]Episode)
+	episodes := make(map[int]*Episode)
 
 	for index, episode := range c.channel.SelectElements("item") {
 		title := episode.SelectElement("title")
@@ -80,12 +81,27 @@ func (c AcastClient) GetAllEpisodes() *map[int]Episode {
 		if len(media) == 0 {
 			fmt.Printf("\nCould not find media link for %s", title)
 		} else {
-			c.episodes[index] = Episode{title: title.Text(), media: media}
-			//fmt.Printf("%d) %s\n", index, title.Text())
+			episodes[index] = &Episode{title: title.Text(), media: media}
 		}
 	}
 
-	return &c.episodes
+	return &episodes
+}
+
+func (c AcastClient) ListAllEpisodes() {
+	if c.episodes == nil {
+		return
+	}
+
+	var keys []int
+	for k := range c.episodes {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
+
+	for _, key := range keys {
+		fmt.Printf("%d) %s\n", key, c.episodes[key].title)
+	}
 }
 
 func (c AcastClient) DownloadAllEpisodes(outputPath string) error {
@@ -101,10 +117,10 @@ func (c AcastClient) DownloadAllEpisodes(outputPath string) error {
 	}
 
 	for index, episode := range c.episodes {
-		titleText := invalidFileNameRegex.ReplaceAllString(episode.title, "")
+		filename := invalidFileNameRegex.ReplaceAllString(episode.title, "")
 
 		fmt.Printf("Downloading [%d/%d]: %s\n", index+1, episodeCount, episode.title)
-		err := c.download(episode.media, filepath.Join(outputPath, fmt.Sprintf("%s.mp3", titleText)))
+		err := c.download(episode.media, filepath.Join(outputPath, fmt.Sprintf("%s.mp3", filename)))
 		if err != nil {
 			return err
 		}
@@ -112,21 +128,21 @@ func (c AcastClient) DownloadAllEpisodes(outputPath string) error {
 	return nil
 }
 
-func (c AcastClient) DownloadLatestEpisode(outputPath string) error {
+func (c AcastClient) DownloadEpisode(index int, outputPath string) error {
 	if c.channel == nil {
 		return nil
 	}
 
-	episode := c.episodes[0]
+	episode := c.episodes[index]
 	if len(episode.media) == 0 {
 		fmt.Printf("\nError downloading %s. Could not find media link.", episode.title)
 		return nil
 	}
 
-	titleText := invalidFileNameRegex.ReplaceAllString(episode.title, "")
-	fmt.Printf("Downloading latest episode: %s\n", episode.title)
+	filename := invalidFileNameRegex.ReplaceAllString(episode.title, "")
+	fmt.Printf("Downloading episode: %s\n", episode.title)
 
-	outputPath = filepath.Join(outputPath, fmt.Sprintf("%s.mp3", titleText))
+	outputPath = filepath.Join(outputPath, fmt.Sprintf("%s.mp3", filename))
 	c.download(episode.media, outputPath)
 
 	return nil
