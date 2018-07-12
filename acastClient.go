@@ -9,8 +9,10 @@ import (
 	"io"
 	"gopkg.in/cheggaaa/pb.v1"
 	"path/filepath"
-	"strings"
+	"regexp"
 )
+
+var invalidFileNameRegex = regexp.MustCompile(regexp.QuoteMeta(`[\\/:"*?<>|]+`))
 
 type AcastClient struct {
 	url      string
@@ -72,12 +74,7 @@ func (c AcastClient) DownloadAllEpisodes(outputPath string) error {
 			fmt.Printf("\nError downloading %s. Could not find media link.", title)
 			return nil
 		}
-		titleText := title.Text()
-		titleText = strings.Replace(titleText, ":", "", -1)
-		titleText = strings.Replace(titleText, "?", "", -1)
-		titleText = strings.Replace(titleText, "|", "", -1)
-		titleText = strings.Replace(titleText, "/", "", -1)
-		titleText = strings.Replace(titleText, "\\", "", -1)
+		titleText := invalidFileNameRegex.ReplaceAllString(title.Text(), "")
 		fmt.Printf("Downloading [%d/%d]: %s\n", index+1, episodeCount, title.Text())
 		err := c.download(media, filepath.Join(outputPath, fmt.Sprintf("%s.mp3", titleText)))
 
@@ -104,12 +101,7 @@ func (c AcastClient) DownloadLatestEpisode(outputPath string) error {
 			return nil
 		}
 
-		titleText := title.Text()
-		titleText = strings.Replace(titleText, ":", "", -1)
-		titleText = strings.Replace(titleText, "?", "", -1)
-		titleText = strings.Replace(titleText, "|", "", -1)
-		titleText = strings.Replace(titleText, "/", "", -1)
-		titleText = strings.Replace(titleText, "\\", "", -1)
+		titleText := invalidFileNameRegex.ReplaceAllString(title.Text(), "")
 		fmt.Printf("Downloading latest episode: %s\n", title.Text())
 		outputPath = filepath.Join(outputPath, fmt.Sprintf("%s.mp3", titleText))
 
