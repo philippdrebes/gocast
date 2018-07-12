@@ -10,8 +10,6 @@ import (
 	"gopkg.in/cheggaaa/pb.v1"
 	"path/filepath"
 	"strings"
-	"github.com/bogem/id3v2"
-	"log"
 )
 
 type AcastClient struct {
@@ -96,8 +94,6 @@ func (c AcastClient) DownloadLatestEpisode(outputPath string) error {
 		return nil
 	}
 
-	author := c.channel.SelectElement("itunes:author")
-
 	for _, episode := range c.channel.SelectElements("item")[:1] {
 		title := episode.SelectElement("title")
 		enclosure := episode.SelectElement("enclosure")
@@ -118,29 +114,6 @@ func (c AcastClient) DownloadLatestEpisode(outputPath string) error {
 		outputPath = filepath.Join(outputPath, fmt.Sprintf("%s.mp3", titleText))
 
 		c.download(media, outputPath)
-
-		// set ID3 Tags
-		// Open file and parse tag in it.
-		tag, err := id3v2.Open(outputPath, id3v2.Options{Parse: true})
-		if err != nil {
-			log.Fatal("Error while opening mp3 file: ", err)
-		}
-
-		// Set simple text frames.
-		tag.SetArtist(author.Text())
-		tag.SetTitle(titleText)
-
-		comment := id3v2.CommentFrame{
-			Encoding:    id3v2.EncodingUTF8,
-			Text:        episode.SelectElement("itunes:summary").Text(),
-		}
-		tag.AddCommentFrame(comment)
-
-		// Write it to file.
-		if err = tag.Save(); err != nil {
-			log.Fatal("Error while saving a tag: ", err)
-		}
-		tag.Close()
 	}
 
 	return nil
